@@ -1,424 +1,476 @@
+#include "main.h"
+SPI_HandleTypeDef hspi3;
+UART_HandleTypeDef huart5;
+
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_UART5_Init(void);
+static void MX_SPI3_Init(void);
+
+int main(void)
+{
+
+  HAL_Init();
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_UART5_Init();
+  MX_SPI3_Init();
+
+   int received_byte;
+   uint8_t SDATAC = 0x11;
+   uint8_t RESET = 0x06;
+   uint8_t WAKEUP = 0x02;
+
+   uint8_t CONFIG1 = 0x01;
+   uint8_t CONFIG2 = 0x02;
+   uint8_t CONFIG3 = 0x03;
+   uint8_t START = 0x08;
+   uint8_t test = 0x00;
+   uint8_t RDATAC = 0x10;
+   uint8_t STOP = 0x0a;
+
+
+
+   uint8_t CH1SET = 0x05;
+   uint8_t CH2SET = 0x06;
+   uint8_t CH3SET = 0x07;
+   uint8_t CH4SET = 0x08;
+   uint8_t CH5SET = 0x09;
+   uint8_t CH6SET = 0x0A;
+   uint8_t CH7SET = 0x0B;
+   uint8_t CH8SET = 0x0C;
+
+
+
+   uint8_t received_Byte;
+   long output[9];
+   long dataPacket;
+
+
+
+//#define DWT_CONTROL *(volatile unsigned long *)0xE0001000
+//#define SCB_DEMCR *(volatile unsigned long *)0xE000EDFC
+//  	  void DWT_Init(void)
+//  	  {
+/////  	      SCB_DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+  	   //   DWT_CONTROL |= DWT_CTRL_CYCCNTENA_Msk;
+  //	  }
+  //	void delay_us(uint32_t us)
+  //	{
+  //	    uint32_t us_count_tic =  us * (SystemCoreClock / 1000000);
+  //	    DWT->CYCCNT = 0U;
+  //	    while(DWT->CYCCNT < us_count_tic);
+  ////	}
+  //	DWT_Init();
+
+
+
+  void send_command(uint8_t cmd)
+  	    {
+  	  		    HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_RESET);
+  	  	  //   	delay_us(20);
+  	  	        HAL_SPI_Transmit(&hspi3, (uint8_t*)&cmd,1, 0x1000);
+  	  	   //     delay_us(20);
+  	  	        HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+  	  	    //    delay_us(3);
+  	  	  }
+
+
+  	  void send_data_by_uart (received_byte)
+  	  	  {
+  	  	  // step 1 - convert dataset
+  	  	  char buffer[16];
+  	  	  char buffer1[16];
+  	  	  sprintf(buffer1, "%d\n", received_byte);
+  	      int a=0;
+  	  	  for (a; a<strlen(buffer1); a=a+1) //
+  	  	         {
+  	  		   if (buffer1[a]!= 0)
+  	  		   	        	      {
+  	  		   buffer[0] = buffer1[a];
+  	  		   HAL_UART_Transmit(&huart5, buffer, 1, 1000);
+  	  	                          }
+  	  	          }
+  	             a=0;
+  	          // step 2 - send by uart UART
+  	  	    //   HAL_UART_Transmit(&huart5, "amigos", 6, 1000);  //"amigo\r\n\0"
+
+  	  	  }
+
+
+  	    void write_byte(uint8_t reg_addr, uint8_t val_hex)
+  	    {
+  	     HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_RESET);
+  	     uint8_t adress = 0x40|reg_addr;
+  	     HAL_SPI_Transmit(&hspi3, (uint8_t*)&adress, 1, 0x1000);
+  	  //   delay_us(5);
+  	     HAL_SPI_Transmit(&hspi3, (uint8_t*)&test, 1, 0x1000);
+  	 //    delay_us(5);
+  	     HAL_SPI_Transmit(&hspi3, (uint8_t*)&val_hex, 1, 0x1000);
+  	//     delay_us(50);
+    	// delay_us(2);
+    	 HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+  	    }
+
+
+
+  	    uint8_t read_byte(uint8_t reg_addr)
+  	    {
+  	      uint8_t out;
+
+  	      HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_RESET);
+  	   //   delay_us(20);
+  	      uint8_t adress = 0x20 | reg_addr ;  //
+  	      HAL_SPI_Transmit(&hspi3, (uint8_t*) &adress, 1 ,0x1000);
+  	      HAL_SPI_Transmit(&hspi3, (uint8_t*)&test, 1, 0x1000);
+  	     // HAL_SPI_Receive(&hspi3, (uint8_t*)&out,1, 0x1000);
+  	      HAL_SPI_TransmitReceive(&hspi3,(uint8_t*)&test,(uint8_t*)&out,1,0x1000);
+  	      HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+    	  return(out);
+
+  	    }
+
+  	    void live_bits ()
+  	    {
+  	      HAL_Delay(100);
+  	      HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
+  	      HAL_Delay(100);
+  	    }
+
+
+
+
+  	   HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+  	//   delay_us(100);
+
+  	                                send_command(SDATAC);
+  	   	    	 	  	            HAL_SPI_Transmit(&hspi3, (uint8_t*)&RESET, 1, 0x1000);
+
+  	   	    	 	      	            HAL_Delay(1000);
+  	   	    	 	    	 	        write_byte(CONFIG1, 0x96); // 96
+  	   	    	 	    	 	        //delay_us(10);
+  	   	    	 	   	 	            write_byte(CONFIG2, 0xC0);  //D1
+  	   	    	 	    	 	        //delay_us(10);
+  	   	    	 	   	 	            write_byte(CONFIG3, 0xE0); // e0
+
+  	   	    	 	   	 	            write_byte(0x04, 0x00);
+  	   	    	 	   	 	            write_byte(0x0D, 0xFF);
+  	   	    	 	   	 	            write_byte(0x0E, 0xFF);
+  	   	    	 	   	 	            write_byte(0x0F, 0x00);
+  	   	    	 	   	 	            write_byte(0x10, 0x00);
+  	   	    	 	   	 	            write_byte(0x11, 0x00);
+   	   	    	 	   	 	            write_byte(0x12, 0x00);
+   	  	    	 	   	 	            write_byte(0x13, 0x00);
+   	   	    	 	   	 	            write_byte(0x14, 0x0F);
+   	   	    	 	   	 	            write_byte(0x15, 0x00);
+   	   	    	 	   	 	            write_byte(0x16, 0x00);
+   	   	    	 	   	 	            write_byte(0x17, 0x00);
+
+  	   	    	 	    	  	     write_byte(CH1SET, 0x00); //69 9
+  	   	    	 	    	 	     write_byte(CH2SET, 0x09); //
+  	   	    	 	    	 	     write_byte(CH3SET, 0x09); //
+  	   	    	 	    	 	     write_byte(CH4SET, 0x09); //
+  	   	    	 	    	 	     write_byte(CH5SET, 0x09); //
+  	   	    	 	    	 	     write_byte(CH6SET, 0x09); //
+  	   	    	 	    	 	     write_byte(CH7SET, 0x09); //
+  	   	    	 	    	 	     write_byte(CH8SET, 0x09); //
+
+  	   	    	 	    	 	  //   uint8_t MISC1 = 0x15;
+  	   	    	 	    	 	 //    write_byte(MISC1, 0x20);
+
+
+  	   	    	 	    	// 	     write_byte(0x0D, 0x00);
+
+  	   	    	 	    	// 	     write_byte(0x0E, 0x00);
+
+
+  	   	    	 	    	 	      HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+
+  	   	    	 	    	 //	      send_command(RDATAC);
+  	   	    	 	    	 	    //  delay_us(150);
+  	   	    	 	    //	    	  HAL_GPIO_WritePin(GPIOD, START_Pin, GPIO_PIN_RESET);
+  	   	    	 	                                 int Read_con = read_byte(CH1SET);
+  	   	    	 	     	   	 	    	  	     send_data_by_uart(Read_con);
+
+
+
+  	   	    	 	     	   	 	  	HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+
+
+  	   	    	 	     	   	 	    	  	     //HAL_GPIO_WritePin(GPIOD, START_Pin, GPIO_PIN_RESET);
+
+                                HAL_Delay(1000);
+
+                               // HAL_GPIO_WritePin(GPIOD, START_Pin, GPIO_PIN_SET);
+                      //          send_command(START);
+
+                        //        HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_RESET);
+
+  	   	    	 	 	        send_command(RDATAC);
+  	   	    	 	 	        send_command(START);
+  	   	    	 	 	     //   send_command(RDATAC);
+  	   	    	 	 	    //   HAL_SPI_Transmit(&hspi3, (uint8_t*)&START,1, 0x1000);
+  	   	    	 	 	 //      HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_RESET);
+  	   	    	 	 	      //  delay_us(50);
+  	   	    	 	 	      //  send_command(RDATAC);
+  	   	    	 	 	   //    HAL_SPI_Transmit(&hspi3, (uint8_t*)&RDATAC,1, 0x1000);
+  	   	    	 	      //	 delay_us(5);
+  	   	    	 	      //     HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+
+
+ 	      while (1)
+  {
+ 	    	if (HAL_GPIO_ReadPin(DRDY_GPIO_Port, DRDY_Pin) == GPIO_PIN_RESET){
+ 	    	            HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_RESET);
+ 	    	            for(int i = 0; i<9; i++){
+ 	    	            	dataPacket = 0;
+ 	    	                for(int j = 0; j<3; j++){
+ 	    	                   // byte dataByte = SPI.transfer(0x00);
+ 	    	                    HAL_SPI_TransmitReceive(&hspi3,(uint8_t*)&test,(uint8_t*)&received_Byte,1,0x1000);
+ 	    	                //    HAL_SPI_Receive(&hspi3, (uint8_t*)&received_Byte,1, 0x1000);
+ 	    	                    dataPacket = (dataPacket<<8) | received_Byte;
+ 	    	                }
+ 	    	                output[i] = dataPacket;
+ 	    	                dataPacket = 0;
+ 	    	                }
+
+ 	    	           HAL_GPIO_WritePin(GPIOD, CS_Pin, GPIO_PIN_SET);
+ 	    	     //      delay_us(200);
+ 	    	            send_data_by_uart(output[1]);
+ 	    	  //        send_data_by_uart(output[4]);
+
+
+                     //   float voltage = (output[1]*3.3)/16777216;	    	      ‬
+ 	    	        //    int voltage1 = voltage*1000;
+ 	    	       //     send_data_by_uart(voltage1);
+ 	    	 }
+
+
+
+
+
+ 	    	//delay_us(200);
+
+
+
+ 	   //  int Read_con = read_byte(CONFIG3);
+
+ 	    //	send_data_by_uart(output[5]);
+
+
+
+
+   	 //   HAL_GPIO_WritePin(GPIOD, START_Pin, GPIO_PIN_RESET);
+
+
+   }
+}
+
+/**
+  * @brief System Clock Configuration
+  * @retval None
+  */
+void SystemClock_Config(void)
+{
+  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
+  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+
+  /** Configure the main internal regulator output voltage 
+  */
+  __HAL_RCC_PWR_CLK_ENABLE();
+  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+  /** Initializes the CPU, AHB and APB busses clocks 
+  */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Initializes the CPU, AHB and APB busses clocks 
+  */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
+                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief SPI3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI3_Init(void)
+{
+
+  /* USER CODE BEGIN SPI3_Init 0 */
+
+  /* USER CODE END SPI3_Init 0 */
+
+  /* USER CODE BEGIN SPI3_Init 1 */
+
+  /* USER CODE END SPI3_Init 1 */
+  /* SPI3 parameter configuration*/
+  hspi3.Instance = SPI3;
+  hspi3.Init.Mode = SPI_MODE_MASTER;
+  hspi3.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi3.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi3.Init.CLKPhase = SPI_PHASE_2EDGE;
+  hspi3.Init.NSS = SPI_NSS_SOFT;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+  hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi3.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI3_Init 2 */
+
+  /* USER CODE END SPI3_Init 2 */
+
+}
+
+/**
+  * @brief UART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART5_Init(void)
+{
+
+  /* USER CODE BEGIN UART5_Init 0 */
+
+  /* USER CODE END UART5_Init 0 */
+
+  /* USER CODE BEGIN UART5_Init 1 */
+
+  /* USER CODE END UART5_Init 1 */
+  huart5.Instance = UART5;
+  huart5.Init.BaudRate = 9600;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART5_Init 2 */
+
+  /* USER CODE END UART5_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10|GPIO_PIN_11, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOD, START_Pin|CS_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PE15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB10 PB11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : START_Pin CS_Pin */
+  GPIO_InitStruct.Pin = START_Pin|CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DRDY_Pin */
+  GPIO_InitStruct.Pin = DRDY_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(DRDY_GPIO_Port, &GPIO_InitStruct);
+
+}
+
+/* USER CODE BEGIN 4 */
+
+/* USER CODE END 4 */
+
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
+void Error_Handler(void)
+{
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
+
+  /* USER CODE END Error_Handler_Debug */
+}
+
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{ 
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
+
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
 //
-//  ADS1299DIAISY.cpp   ARDUINO LIBRARY FOR COMMUNICATING WITH TWO
-//  DAISY-CHAINED ADS1299 BOARDS
-//  
-//  Created by Conor Russomanno, Luke Travis, and Joel Murphy. Summer, 2013
-//
-//  Extended by Chip Audette through April 2014
-//
-
-
-#include "pins_arduino.h"
-#include "ADS1299.h"
-
-void ADS1299::initialize(int _DRDY, int _RST, int _CS, int _FREQ, boolean _isDaisy){
-	isDaisy = _isDaisy;
-	DRDY = _DRDY;
-	CS = _CS;
-	int FREQ = _FREQ;
-	int RST = _RST;
-	
-	delay(50);				// recommended power up sequence requiers Tpor (~32mS)	
-	pinMode(RST,OUTPUT);
-	pinMode(RST,LOW);
-	delayMicroseconds(4);	// toggle reset pin
-	pinMode(RST,HIGH);
-	delayMicroseconds(20);	// recommended to wait 18 Tclk before using device (~8uS);
-	
-
-    // **** ----- SPI Setup ----- **** //
-    
-    // Set direction register for SCK and MOSI pin.
-    // MISO pin automatically overrides to INPUT.
-    // When the SS pin is set as OUTPUT, it can be used as
-    // a general purpose output port (it doesn't influence
-    // SPI operations).
-    
-    pinMode(SCK, OUTPUT);
-    pinMode(MOSI, OUTPUT);
-    pinMode(SS, OUTPUT);
-	
-    
-    digitalWrite(SCK, LOW);
-    digitalWrite(MOSI, LOW);
-    digitalWrite(SS, HIGH);
-    
-    // set as master and enable SPI
-    SPCR |= _BV(MSTR);
-    SPCR |= _BV(SPE);
-    //set bit order
-    SPCR &= ~(_BV(DORD)); ////SPI data format is MSB (pg. 25)
-	// set data mode
-    SPCR = (SPCR & ~SPI_MODE_MASK) | SPI_DATA_MODE; //clock polarity = 0; clock phase = 1 (pg. 8)
-    // set clock divider
-	switch (FREQ){
-		case 8:
-			DIVIDER = SPI_CLOCK_DIV_2;
-			break;
-		case 4:
-			DIVIDER = SPI_CLOCK_DIV_4;
-			break;
-		case 1:
-			DIVIDER = SPI_CLOCK_DIV_16;
-			break;
-		default:
-			break;
-	}
-    SPCR = (SPCR & ~SPI_CLOCK_MASK) | (DIVIDER);  // set SCK frequency  
-    SPSR = (SPSR & ~SPI_2XCLOCK_MASK) | (DIVIDER); // by dividing 16MHz system clock
-    
-    
-    
-    
-    
-    // **** ----- End of SPI Setup ----- **** //
-    
-    // initalize the  data ready chip select and reset pins:
-    pinMode(DRDY, INPUT);
-    pinMode(CS, OUTPUT);
-	
-	digitalWrite(CS,HIGH); 	
-	digitalWrite(RST,HIGH);
-}
-
-//System Commands
-void ADS1299::WAKEUP() {
-    digitalWrite(CS, LOW); 
-    transfer(_WAKEUP);
-    digitalWrite(CS, HIGH); 
-    delayMicroseconds(3);  		//must wait 4 tCLK cycles before sending another command (Datasheet, pg. 35)
-}
-
-void ADS1299::STANDBY() {		// only allowed to send WAKEUP after sending STANDBY
-    digitalWrite(CS, LOW);
-    transfer(_STANDBY);
-    digitalWrite(CS, HIGH);
-}
-
-void ADS1299::RESET() {			// reset all the registers to default settings
-    digitalWrite(CS, LOW);
-    transfer(_RESET);
-    delayMicroseconds(12);   	//must wait 18 tCLK cycles to execute this command (Datasheet, pg. 35)
-    digitalWrite(CS, HIGH);
-}
-
-void ADS1299::START() {			//start data conversion 
-    digitalWrite(CS, LOW);
-    transfer(_START);
-    digitalWrite(CS, HIGH);
-}
-
-void ADS1299::STOP() {			//stop data conversion
-    digitalWrite(CS, LOW);
-    transfer(_STOP);
-    digitalWrite(CS, HIGH);
-}
-
-void ADS1299::RDATAC() {
-    digitalWrite(CS, LOW);
-    transfer(_RDATAC);
-    digitalWrite(CS, HIGH);
-	delayMicroseconds(3);   
-}
-void ADS1299::SDATAC() {
-    digitalWrite(CS, LOW);
-    transfer(_SDATAC);
-    digitalWrite(CS, HIGH);
-	delayMicroseconds(3);   //must wait 4 tCLK cycles after executing this command (Datasheet, pg. 37)
-}
-
-
-// Register Read/Write Commands
-byte ADS1299::getDeviceID() {			// simple hello world com check
-	byte data = RREG(0x00);
-	if(verbose){						// verbose otuput
-		Serial.print(F("Device ID "));
-		printHex(data);	
-	}
-	return data;
-}
-
-byte ADS1299::RREG(byte _address) {		//  reads ONE register at _address
-    byte opcode1 = _address + 0x20; 	//  RREG expects 001rrrrr where rrrrr = _address
-    digitalWrite(CS, LOW); 				//  open SPI
-    transfer(opcode1); 					//  opcode1
-    transfer(0x00); 					//  opcode2
-    regData[_address] = transfer(0x00);//  update mirror location with returned byte
-    digitalWrite(CS, HIGH); 			//  close SPI	
-	if (verbose){						//  verbose output
-		printRegisterName(_address);
-		printHex(_address);
-		Serial.print(", ");
-		printHex(regData[_address]);
-		Serial.print(", ");
-		for(byte j = 0; j<8; j++){
-			Serial.print(bitRead(regData[_address], 7-j));
-			if(j!=7) Serial.print(", ");
-		}
-		
-		Serial.println();
-	}
-	return regData[_address];			// return requested register value
-}
-
-// Read more than one register starting at _address
-void ADS1299::RREGS(byte _address, byte _numRegistersMinusOne) {
-//	for(byte i = 0; i < 0x17; i++){
-//		regData[i] = 0;					//  reset the regData array
-//	}
-    byte opcode1 = _address + 0x20; 	//  RREG expects 001rrrrr where rrrrr = _address
-    digitalWrite(CS, LOW); 				//  open SPI
-    transfer(opcode1); 					//  opcode1
-    transfer(_numRegistersMinusOne);	//  opcode2
-    for(int i = 0; i <= _numRegistersMinusOne; i++){
-        regData[_address + i] = transfer(0x00); 	//  add register byte to mirror array
-		}
-    digitalWrite(CS, HIGH); 			//  close SPI
-	if(verbose){						//  verbose output
-		for(int i = 0; i<= _numRegistersMinusOne; i++){
-			printRegisterName(_address + i);
-			printHex(_address + i);
-			Serial.print(", ");
-			printHex(regData[_address + i]);
-			Serial.print(", ");
-			for(int j = 0; j<8; j++){
-				Serial.print(bitRead(regData[_address + i], 7-j));
-				if(j!=7) Serial.print(", ");
-			}
-			Serial.println();
-		}
-    }
-    
-}
-
-void ADS1299::WREG(byte _address, byte _value) {	//  Write ONE register at _address
-    byte opcode1 = _address + 0x40; 	//  WREG expects 010rrrrr where rrrrr = _address
-    digitalWrite(CS, LOW); 				//  open SPI
-    transfer(opcode1);					//  Send WREG command & address
-    transfer(0x00);						//	Send number of registers to read -1
-    transfer(_value);					//  Write the value to the register
-    digitalWrite(CS, HIGH); 			//  close SPI
-	regData[_address] = _value;			//  update the mirror array
-	if(verbose){						//  verbose output
-		Serial.print(F("Register "));
-		printHex(_address);
-		Serial.println(F(" modified."));
-	}
-}
-
-void ADS1299::WREGS(byte _address, byte _numRegistersMinusOne) {
-    byte opcode1 = _address + 0x40;		//  WREG expects 010rrrrr where rrrrr = _address
-    digitalWrite(CS, LOW); 				//  open SPI
-    transfer(opcode1);					//  Send WREG command & address
-    transfer(_numRegistersMinusOne);	//	Send number of registers to read -1	
-	for (int i=_address; i <=(_address + _numRegistersMinusOne); i++){
-		transfer(regData[i]);			//  Write to the registers
-	}	
-	digitalWrite(CS,HIGH);				//  close SPI
-	if(verbose){
-		Serial.print(F("Registers "));
-		printHex(_address); Serial.print(F(" to "));
-		printHex(_address + _numRegistersMinusOne);
-		Serial.println(F(" modified"));
-	}
-}
-
-
-void ADS1299::updateChannelData(){
-	byte inByte;
-	int nchan=8;  //assume 8 channel.  If needed, it automatically changes to 16 automatically in a later block.
-	digitalWrite(CS, LOW);				//  open SPI
-	
-	// READ CHANNEL DATA FROM FIRST ADS IN DAISY LINE
-	for(int i=0; i<3; i++){			//  read 3 byte status register from ADS 1 (1100+LOFF_STATP+LOFF_STATN+GPIO[7:4])
-		inByte = transfer(0x00);
-		stat_1 = (stat_1<<8) | inByte;				
-	}
-	
-	for(int i = 0; i<8; i++){
-		for(int j=0; j<3; j++){		//  read 24 bits of channel data from 1st ADS in 8 3 byte chunks
-			inByte = transfer(0x00);
-			channelData[i] = (channelData[i]<<8) | inByte;
-		}
-	}
-	
-	if (isDaisy) {
-		nchan = 16;
-		// READ CHANNEL DATA FROM SECOND ADS IN DAISY LINE
-		for(int i=0; i<3; i++){			//  read 3 byte status register from ADS 2 (1100+LOFF_STATP+LOFF_STATN+GPIO[7:4])
-			inByte = transfer(0x00);
-			stat_2 = (stat_1<<8) | inByte;				
-		}
-		
-		for(int i = 8; i<16; i++){
-			for(int j=0; j<3; j++){		//  read 24 bits of channel data from 2nd ADS in 8 3 byte chunks
-				inByte = transfer(0x00);
-				channelData[i] = (channelData[i]<<8) | inByte;
-			}
-		}
-	}
-	
-	digitalWrite(CS, HIGH);				//  close SPI
-	
-	//reformat the numbers
-	for(int i=0; i<nchan; i++){			// convert 3 byte 2's compliment to 4 byte 2's compliment	
-		if(bitRead(channelData[i],23) == 1){	
-			channelData[i] |= 0xFF000000;
-		}else{
-			channelData[i] &= 0x00FFFFFF;
-		}
-	}
-}
-
-	
-//read data
-void ADS1299::RDATA() {				//  use in Stop Read Continuous mode when DRDY goes low
-	byte inByte;
-	stat_1 = 0;							//  clear the status registers
-	stat_2 = 0;	
-	int nchan = 8;	//assume 8 channel.  If needed, it automatically changes to 16 automatically in a later block.
-	digitalWrite(CS, LOW);				//  open SPI
-	transfer(_RDATA);
-	
-	// READ CHANNEL DATA FROM FIRST ADS IN DAISY LINE
-	for(int i=0; i<3; i++){			//  read 3 byte status register (1100+LOFF_STATP+LOFF_STATN+GPIO[7:4])
-		inByte = transfer(0x00);
-		stat_1 = (stat_1<<8) | inByte;				
-	}
-	
-	for(int i = 0; i<8; i++){
-		for(int j=0; j<3; j++){		//  read 24 bits of channel data from 1st ADS in 8 3 byte chunks
-			inByte = transfer(0x00);
-			channelData[i] = (channelData[i]<<8) | inByte;
-		}
-	}
-	
-	if (isDaisy) {
-		nchan = 16;
-		
-		// READ CHANNEL DATA FROM SECOND ADS IN DAISY LINE
-		for(int i=0; i<3; i++){			//  read 3 byte status register (1100+LOFF_STATP+LOFF_STATN+GPIO[7:4])
-			inByte = transfer(0x00);
-			stat_2 = (stat_1<<8) | inByte;				
-		}
-		
-		for(int i = 8; i<16; i++){
-			for(int j=0; j<3; j++){		//  read 24 bits of channel data from 2nd ADS in 8 3 byte chunks
-				inByte = transfer(0x00);
-				channelData[i] = (channelData[i]<<8) | inByte;
-			}
-		}
-	}
-	
-	for(int i=0; i<nchan; i++){			// convert 3 byte 2's compliment to 4 byte 2's compliment	
-		if(bitRead(channelData[i],23) == 1){	
-			channelData[i] |= 0xFF000000;
-		}else{
-			channelData[i] &= 0x00FFFFFF;
-		}
-	}
-	
-    
-}
-
-
-
-// String-Byte converters for RREG and WREG
-void ADS1299::printRegisterName(byte _address) {
-    if(_address == ID){
-        Serial.print(F("ID, ")); //the "F" macro loads the string directly from Flash memory, thereby saving RAM
-    }
-    else if(_address == CONFIG1){
-        Serial.print(F("CONFIG1, "));
-    }
-    else if(_address == CONFIG2){
-        Serial.print(F("CONFIG2, "));
-    }
-    else if(_address == CONFIG3){
-        Serial.print(F("CONFIG3, "));
-    }
-    else if(_address == LOFF){
-        Serial.print(F("LOFF, "));
-    }
-    else if(_address == CH1SET){
-        Serial.print(F("CH1SET, "));
-    }
-    else if(_address == CH2SET){
-        Serial.print(F("CH2SET, "));
-    }
-    else if(_address == CH3SET){
-        Serial.print(F("CH3SET, "));
-    }
-    else if(_address == CH4SET){
-        Serial.print(F("CH4SET, "));
-    }
-    else if(_address == CH5SET){
-        Serial.print(F("CH5SET, "));
-    }
-    else if(_address == CH6SET){
-        Serial.print(F("CH6SET, "));
-    }
-    else if(_address == CH7SET){
-        Serial.print(F("CH7SET, "));
-    }
-    else if(_address == CH8SET){
-        Serial.print(F("CH8SET, "));
-    }
-    else if(_address == BIAS_SENSP){
-        Serial.print(F("BIAS_SENSP, "));
-    }
-    else if(_address == BIAS_SENSN){
-        Serial.print(F("BIAS_SENSN, "));
-    }
-    else if(_address == LOFF_SENSP){
-        Serial.print(F("LOFF_SENSP, "));
-    }
-    else if(_address == LOFF_SENSN){
-        Serial.print(F("LOFF_SENSN, "));
-    }
-    else if(_address == LOFF_FLIP){
-        Serial.print(F("LOFF_FLIP, "));
-    }
-    else if(_address == LOFF_STATP){
-        Serial.print(F("LOFF_STATP, "));
-    }
-    else if(_address == LOFF_STATN){
-        Serial.print(F("LOFF_STATN, "));
-    }
-    else if(_address == GPIO){
-        Serial.print(F("GPIO, "));
-    }
-    else if(_address == MISC1){
-        Serial.print(F("MISC1, "));
-    }
-    else if(_address == MISC2){
-        Serial.print(F("MISC2, "));
-    }
-    else if(_address == CONFIG4){
-        Serial.print(F("CONFIG4, "));
-    }
-}
-
-//SPI communication methods
-byte ADS1299::transfer(byte _data) {
-	cli();
-    SPDR = _data;
-    while (!(SPSR & _BV(SPIF)))
-        ;
-	sei();
-    return SPDR;
-}
-
-// Used for printing HEX in verbose feedback mode
-void ADS1299::printHex(byte _data){
-	Serial.print("0x");
-    if(_data < 0x10) Serial.print("0");
-    Serial.print(_data, HEX);
-}
-
-//-------------------------------------------------------------------//
-//-------------------------------------------------------------------//
-//-------------------------------------------------------------------//
-
-
-
